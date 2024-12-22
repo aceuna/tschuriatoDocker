@@ -20,4 +20,14 @@ services:
       - RABBITMQ_PASS=supersecret123
       - RABBITMQ_URL=amqp://stockmarket:supersecret123@rabbitmq:5672
     command: sh -c "until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done; ./stock-publisher"
-
+  consumer:
+    build: ./consumer
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=stockmarket
+      - RABBITMQ_PASS=supersecret123
+      - RABBITMQ_URL=amqp://stockmarket:supersecret123@rabbitmq:5672
+    command: sh -c "until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done; ./consumer"
