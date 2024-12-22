@@ -1,0 +1,23 @@
+version: '3'
+ 
+services:
+  rabbitmq:
+    image: rabbitmq:management
+    ports:
+      - "15672:15672"  # Management UI
+      - "5672:5672"    # Message broker port
+    environment:
+      - RABBITMQ_DEFAULT_USER=stockmarket
+      - RABBITMQ_DEFAULT_PASS=supersecret123
+  publisher:
+    build: ./publisher
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=stockmarket
+      - RABBITMQ_PASS=supersecret123
+      - RABBITMQ_URL=amqp://stockmarket:supersecret123@rabbitmq:5672
+    command: sh -c "until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done; ./stock-publisher"
+
