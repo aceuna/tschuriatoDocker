@@ -1,19 +1,23 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"log"
+	"time"
 
 	"github.com/streadway/amqp"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var (
-	rabbitMQURL = "amqp://stockmarket:supersecret123@rabbitmq:5672/" // URL zu RabbitMQ mit Benutzer
-	queueName   = "AAPL"                                             // Der Name der Queue
+	rabbitMQURL = "amqp://stockmarket:supersecret123@rabbitmq:5672/"                                                           // URL zu RabbitMQ mit Benutzer
+	queueName   = "AAPL"                                                                                                       // Der Name der Queue
+	mongoURI    = "mongodb://host.docker.internal:27017,host.docker.internal:27018,host.docker.internal:27019/?replicaSet=rs0" // URI zu MongoDB
 )
 
-// Struktur für die Nachricht
 type StockMessage struct {
 	Company   string  `json:"company"`
 	EventType string  `json:"eventType"`
@@ -49,6 +53,34 @@ func main() {
 	}
 	log.Println("Queue erfolgreich deklariert.")
 
+	// Verbindung zur MongoDB aufbauen
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(mongoURI))
+	if err != nil {
+		log.Fatalf("Fehler beim Verbinden mit MongoDB: %v", err)
+	}
+	defer client.Disconnect(context.Background())
+
+	// MongoDB-Datenbank auswählen oder erstellen
+	database := client.Database("stockmarket")
+
+	// Collection "stocks" auswählen
+	collection := database.Collection("stocks")
+
+	// Sicherstellen, dass die Collection mit einem Index erstellt wird
+	// Hier können wir optional einen Index hinzufügen, falls erforderlich
+	indexModel := mongo.IndexModel{
+		Keys: bson.M{
+			"company": 1, // Beispiel: Index auf das 'company'-Feld
+		},
+		Options: nil,
+	}
+
+	// Erstellen des Indexes (falls notwendig)
+	_, err = collection.Indexes().CreateOne(context.Background(), indexModel)
+	if err != nil {
+		log.Printf("Fehler beim Erstellen des Indexes: %v", err)
+	}
+
 	// Nachrichten aus der Queue konsumieren
 	msgs, err := ch.Consume(
 		queueName, // Queue-Name
@@ -63,11 +95,9 @@ func main() {
 		log.Fatalf("Fehler beim Konsumieren von Nachrichten: %v", err)
 	}
 
-	// Slice für gesammelte Nachrichten
-	var data []float64
+	// Nachrichten in Batches von 1000 abholen
+	var batch []StockMessage
 	batchSize := 1000
-
-	// Nachrichten verarbeiten
 	for msg := range msgs {
 		// Nachricht in ein StockMessage-Objekt umwandeln
 		var stockMsg StockMessage
@@ -77,23 +107,35 @@ func main() {
 			continue
 		}
 
-		// Den Preis aus der Nachricht extrahieren
-		data = append(data, stockMsg.Price)
+		// Nachricht zur Batch hinzufügen
+		batch = append(batch, stockMsg)
 
-		// Wenn 1000 Nachrichten gesammelt sind, Durchschnitt berechnen
-		if len(data) == batchSize {
+		// Wenn Batch die gewünschte Größe erreicht hat
+		if len(batch) >= batchSize {
 			// Durchschnitt berechnen
 			var sum float64
-			for _, val := range data {
-				sum += val
+			for _, msg := range batch {
+				sum += msg.Price
 			}
-			avg := sum / float64(batchSize)
+			avgPrice := sum / float64(len(batch))
 
-			// Durchschnitt in der Konsole ausgeben
-			fmt.Printf("Durchschnitt der letzten %d Nachrichten: %.2f\n", batchSize, avg)
+			// Dokument für MongoDB erstellen
+			document := bson.D{
+				{Key: "company", Value: batch[0].Company}, // Alle Nachrichten im Batch haben denselben "company"-Wert
+				{Key: "avgPrice", Value: avgPrice},
+				{Key: "timestamp", Value: time.Now()},
+			}
 
-			// Slice zurücksetzen für die nächste Gruppe
-			data = nil
+			// Dokument in die MongoDB-Sammlung einfügen
+			_, err := collection.InsertOne(context.Background(), document)
+			if err != nil {
+				log.Printf("Fehler beim Einfügen der Nachricht in MongoDB: %v", err)
+			} else {
+				log.Printf("Durchschnittspreis für %s berechnet und in MongoDB eingefügt: %.2f", batch[0].Company, avgPrice)
+			}
+
+			// Batch zurücksetzen
+			batch = nil
 		}
 	}
 }
