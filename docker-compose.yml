@@ -10,7 +10,7 @@ services:
       - RABBITMQ_DEFAULT_USER=stockmarket
       - RABBITMQ_DEFAULT_PASS=supersecret123
   publisher:
-    build: ./publisher
+    image: aceuna/stock-publisher:latest
     depends_on:
       - rabbitmq
     environment:
