@@ -20,8 +20,17 @@ services:
       - RABBITMQ_PASS=supersecret123
       - RABBITMQ_URL=amqp://stockmarket:supersecret123@rabbitmq:5672
     command: sh -c "until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done; ./stock-publisher"
-  consumer:
-    build: ./consumer
+  consumer_AAPL:
+    image: aceuna/consumer:latest
+    depends_on:
+      - rabbitmq
+    environment:
+      - MONGO_URI=mongodb://host.docker.internal:27017,host.docker.internal:27018,host.docker.internal:27019/?replicaSet=rs0
+      - QUEUE_NAME=AAPL
+      - RABBITMQ_URL=amqp://stockmarket:supersecret123@rabbitmq:5672/
+    command: sh -c "until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done; ./consumer"
+  consumer_MSFT:
+    image: aceuna/consumer:latest
     depends_on:
       - rabbitmq
     environment:
@@ -29,7 +38,15 @@ services:
       - QUEUE_NAME=MSFT
       - RABBITMQ_URL=amqp://stockmarket:supersecret123@rabbitmq:5672/
     command: sh -c "until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done; ./consumer"
-
+  consumer_TSLA:
+    image: aceuna/consumer:latest
+    depends_on:
+      - rabbitmq
+    environment:
+      - MONGO_URI=mongodb://host.docker.internal:27017,host.docker.internal:27018,host.docker.internal:27019/?replicaSet=rs0
+      - QUEUE_NAME=TSLA
+      - RABBITMQ_URL=amqp://stockmarket:supersecret123@rabbitmq:5672/
+    command: sh -c "until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done; ./consumer"
   mongo1:
     image: mongo:7.0
     ports:
@@ -44,7 +61,6 @@ services:
       retries: 30
       start_period: 0s
       start_interval: 1s
-
   mongo2:
     image: mongo:7.0
     ports:
@@ -52,7 +68,6 @@ services:
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--port", "27018"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    
   mongo3:
     image: mongo:7.0
     ports:
@@ -75,4 +90,3 @@ services:
       - MONGO_INITDB_DATABASE=stockmarket
       - NODE_ENV=development
       - PORT=3000
-    #command: sh -c "until nc -z mongo1 27017; do echo waiting for mongo1; sleep 2; done; until nc -z mongo2 27018; do echo waiting for mongo2; sleep 2; done; until nc -z mongo3 27019; do echo waiting for mongo3; sleep 2; done; ./stock-liveview"

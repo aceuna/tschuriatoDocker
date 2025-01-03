@@ -13,9 +13,3 @@ COPY . .
 
 # Baue die Go-Anwendung
 RUN go build -o consumer .
-
-# Falls erforderlich, portiere die Anwendung auf einen bestimmten Port (z.B. 8080)
-EXPOSE 8080
-
-# Führe die Go-Anwendung aus
-#CMD ["./consumer"]
