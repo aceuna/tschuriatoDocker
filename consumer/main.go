@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"os"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -13,9 +14,9 @@ import (
 )
 
 var (
-	rabbitMQURL = "amqp://stockmarket:supersecret123@rabbitmq:5672/"                                                           // URL zu RabbitMQ mit Benutzer
-	queueName   = "AAPL"                                                                                                       // Der Name der Queue
-	mongoURI    = "mongodb://host.docker.internal:27017,host.docker.internal:27018,host.docker.internal:27019/?replicaSet=rs0" // URI zu MongoDB
+	rabbitMQURL = os.Getenv("RABBITMQ_URL") // URL zu RabbitMQ mit Benutzer
+	queueName   = os.Getenv("QUEUE_NAME")   // Der Name der Queue
+	mongoURI    = os.Getenv("MONGO_URI")    // URI zur MongoDB (inkl. Benutzername und Passwort
 )
 
 type StockMessage struct {
