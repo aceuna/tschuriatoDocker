@@ -75,7 +75,7 @@ services:
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--port", "27019"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
-  stock-liveview-master:
+  stock-liveview-master1:
     build: ./stock-liveview-master
     ports:
       - "3000:3000"
@@ -90,3 +90,18 @@ services:
       - MONGO_INITDB_DATABASE=stockmarket
       - NODE_ENV=development
       - PORT=3000
+  stock-liveview-master2:
+    build: ./stock-liveview-master
+    ports:
+      - "3001:3001"
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+    environment:
+      - MONGODB_URL=mongodb://host.docker.internal:27017,host.docker.internal:27018,host.docker.internal:27019/?replicaSet=rs0
+      - MONGODB_DB=stockmarket
+      - MONGODB_COLLECTION=stocks
+      - MONGO_INITDB_DATABASE=stockmarket
+      - NODE_ENV=development
+      - PORT=3001
