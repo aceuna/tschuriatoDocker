@@ -52,6 +52,8 @@ services:
     ports:
       - "27017:27017"
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
+    volumes:
+      - ./DB/mongo1_data:/data/db
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
@@ -66,6 +68,8 @@ services:
     ports:
       - "27018:27018"
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--port", "27018"]
+    volumes:
+      - ./DB/mongo2_data:/data/db
     extra_hosts:
       - "host.docker.internal:host-gateway"
   mongo3:
@@ -73,6 +77,8 @@ services:
     ports:
       - "27019:27019"
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--port", "27019"]
+    volumes:
+      - ./DB/mongo3_data:/data/db
     extra_hosts:
       - "host.docker.internal:host-gateway"
   stock-liveview-master1:
