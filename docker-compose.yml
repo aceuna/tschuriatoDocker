@@ -19,6 +19,7 @@ services:
       - RABBITMQ_USER=stockmarket
       - RABBITMQ_PASS=supersecret123
       - RABBITMQ_URL=amqp://stockmarket:supersecret123@rabbitmq:5672
+      - TICKER_INTERVAL=10 # ram auslastung war zu hoch
     command: sh -c "until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done; ./stock-publisher"
   consumer_AAPL:
     image: aceuna/consumer:latest
@@ -83,6 +84,7 @@ services:
       - "host.docker.internal:host-gateway"
   stock-liveview-master1:
     build: ./stock-liveview-master
+    restart: always
     ports:
       - "3000:3000"
     depends_on:
@@ -98,6 +100,7 @@ services:
       - PORT=3000
   stock-liveview-master2:
     build: ./stock-liveview-master
+    restart: always
     ports:
       - "3001:3001"
     depends_on:
@@ -111,3 +114,13 @@ services:
       - MONGO_INITDB_DATABASE=stockmarket
       - NODE_ENV=development
       - PORT=3001
+  nginx:
+    image: nginx:latest
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - stock-liveview-master1
+      - stock-liveview-master2
