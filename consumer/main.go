@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"math"
 	"os"
 	"time"
 
@@ -123,7 +124,7 @@ func main() {
 			// Dokument für MongoDB erstellen
 			document := bson.D{
 				{Key: "company", Value: batch[0].Company}, // Alle Nachrichten im Batch haben denselben "company"-Wert
-				{Key: "avgPrice", Value: avgPrice},
+				{Key: "avgPrice", Value: math.Round(avgPrice*100) / 100},
 				{Key: "timestamp", Value: time.Now()},
 			}
 
